@@ -20,4 +20,6 @@
     <string name = "Version">版本: v1.6.6</string>
     <string name="readText">已讀 跳至下一則</string>
     <string name="classCodeError">教室代碼已被使用</string>
+    <string name="photo_message_preview">[圖片訊息] 點擊查看</string>
+    <string name="photo_message_description">廣播訊息圖片</string>
 </resources>
