@@ -25,6 +25,7 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.text.SpannableString;
+import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
 import android.text.util.Linkify;
 import android.util.Log;
@@ -32,11 +33,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.text.SimpleDateFormat;
@@ -44,8 +47,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 /**
@@ -59,6 +60,7 @@ public class New_message extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
+    private static final String PHOTO_PREFIX = "[Photo]";
 
 
     int seeing = 0; // 現在正在顯示的訊息索引值
@@ -68,6 +70,7 @@ public class New_message extends Fragment {
 
     TextView readText;
     TextView content;
+    ImageView contentImage;
     TextView class_num;
     TextView sendtime;
     TextView page_num;
@@ -132,6 +135,7 @@ public class New_message extends Fragment {
         teacher = view.findViewById(R.id.teacher); // 教師名稱 textview
         fromWhere = view.findViewById(R.id.fromWhere); // 組別 textview
         content = view.findViewById(R.id.content); // 內容 textview
+        contentImage = view.findViewById(R.id.contentImage); // 內容圖片
         sendtime = view.findViewById(R.id.sendtime); // 傳送時間 textview
         page_num = view.findViewById(R.id.page_num); // 頁碼 textview
         historyMessage = view.findViewById(R.id.historyMessage); // "歷史訊息" textview
@@ -236,7 +240,7 @@ public class New_message extends Fragment {
                                 oneMessageTimer_His(view);
                             }
                         } else {
-                            content.setText("無新訊息");
+                            displayMessageContent("無新訊息");
                         }
                     } else if (message.length != 1) {
                         if (currentProgressBarIndex >= message.length) {
@@ -302,7 +306,7 @@ public class New_message extends Fragment {
                     oneMessageTimer_His(view); // 啟動倒數
                 }
             } else {
-                content.setText("無新訊息");
+                displayMessageContent("無新訊息");
             }
         }
         return view;
@@ -353,8 +357,7 @@ public class New_message extends Fragment {
         }
         teacher.setText(message[seeing][0]);
         fromWhere.setText(message[seeing][1]);
-        content.setText(message[seeing][2]);
-        content.setLinkTextColor(getResources().getColor(R.color.url));
+        displayMessageContent(message[seeing][2]);
         sendtime.setText(message[seeing][3]);
         page_num.setText(seeing + 1 + "/" + message.length);
         seeing++;
@@ -362,6 +365,81 @@ public class New_message extends Fragment {
     }
 
 
+    private void displayMessageContent(String messageText) {
+        if (messageText == null) {
+            messageText = "";
+        }
+
+        if (isPhotoMessage(messageText)) {
+            String url = extractPhotoUrl(messageText);
+            if (!TextUtils.isEmpty(url)) {
+                content.setVisibility(View.GONE);
+                content.setText("");
+                contentImage.setVisibility(View.VISIBLE);
+                Glide.with(this)
+                        .load(url)
+                        .into(contentImage);
+                return;
+            }
+            String fallbackText = messageText.substring(PHOTO_PREFIX.length()).trim();
+            if (!TextUtils.isEmpty(fallbackText)) {
+                messageText = fallbackText;
+            }
+        }
+
+        Glide.with(this).clear(contentImage);
+        contentImage.setImageDrawable(null);
+        contentImage.setVisibility(View.GONE);
+        content.setVisibility(View.VISIBLE);
+        content.setText(messageText);
+        content.setLinkTextColor(ContextCompat.getColor(requireContext(), R.color.url));
+    }
+
+    private boolean isPhotoMessage(String messageText) {
+        return !TextUtils.isEmpty(messageText) && messageText.startsWith(PHOTO_PREFIX);
+    }
+
+    private String extractPhotoUrl(String messageText) {
+        if (TextUtils.isEmpty(messageText) || !messageText.startsWith(PHOTO_PREFIX)) {
+            return "";
+        }
+        String urlPart = messageText.substring(PHOTO_PREFIX.length()).trim();
+        int endIndex = urlPart.length();
+        int spaceIndex = urlPart.indexOf(' ');
+        if (spaceIndex >= 0) {
+            endIndex = Math.min(endIndex, spaceIndex);
+        }
+        int newlineIndex = urlPart.indexOf('\n');
+        if (newlineIndex >= 0) {
+            endIndex = Math.min(endIndex, newlineIndex);
+        }
+        int bracketIndex = urlPart.indexOf('(');
+        if (bracketIndex >= 0) {
+            endIndex = Math.min(endIndex, bracketIndex);
+        }
+        int fullWidthBracketIndex = urlPart.indexOf('（');
+        if (fullWidthBracketIndex >= 0) {
+            endIndex = Math.min(endIndex, fullWidthBracketIndex);
+        }
+        String url = urlPart.substring(0, Math.max(0, endIndex)).trim();
+        return trimTrailingPunctuation(url);
+    }
+
+    private String trimTrailingPunctuation(String input) {
+        if (TextUtils.isEmpty(input)) {
+            return "";
+        }
+        int end = input.length();
+        while (end > 0) {
+            char c = input.charAt(end - 1);
+            if (c == ')' || c == ']' || c == '>' || c == '}' || c == '，' || c == ',' || c == '。' || c == '.' || c == '）' || c == '】' || c == '》') {
+                end--;
+            } else {
+                break;
+            }
+        }
+        return input.substring(0, end);
+    }
 
 
     // 顯示新訊息

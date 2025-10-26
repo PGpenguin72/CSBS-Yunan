@@ -133,27 +133,42 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintVertical_bias="0.971" />
 
-            <TextView
-                android:id="@+id/content"
+            <FrameLayout
+                android:id="@+id/contentContainer"
                 android:layout_width="980dp"
                 android:layout_height="425dp"
                 android:layout_marginStart="5dp"
                 android:layout_marginEnd="5dp"
-                android:autoLink="web"
-                android:fontFamily="sans-serif"
-                android:marqueeRepeatLimit="marquee_forever"
-                android:paddingStart="50sp"
-                android:paddingTop="10sp"
-                android:paddingEnd="20sp"
-                android:paddingBottom="8sp"
-                android:textColor="#FFFFFF"
-                android:textSize="48sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="1.0"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.584" />
+                app:layout_constraintVertical_bias="0.584">
+
+                <ImageView
+                    android:id="@+id/contentImage"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:adjustViewBounds="true"
+                    android:contentDescription="@string/photo_message_description"
+                    android:scaleType="fitCenter"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/content"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:autoLink="web"
+                    android:fontFamily="sans-serif"
+                    android:marqueeRepeatLimit="marquee_forever"
+                    android:paddingStart="50sp"
+                    android:paddingTop="10sp"
+                    android:paddingEnd="20sp"
+                    android:paddingBottom="8sp"
+                    android:textColor="#FFFFFF"
+                    android:textSize="48sp" />
+
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/historyMessage"
@@ -196,7 +211,7 @@
                 android:textColor="#DFDFDF"
                 android:textSize="40sp"
                 android:visibility="visible"
-                app:layout_constraintBottom_toTopOf="@+id/content"
+                app:layout_constraintBottom_toTopOf="@+id/contentContainer"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.084"
                 app:layout_constraintStart_toEndOf="@+id/teacher"
