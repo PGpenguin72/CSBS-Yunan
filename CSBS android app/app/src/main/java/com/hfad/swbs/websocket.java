@@ -29,7 +29,7 @@ public class websocket extends WebSocketListener {
     Gson gson = new Gson();
     private final Context context;
 
-    String ip = "ws://140.119.99.17:80";
+    String ip = "ws://192.168.81.195:5050";
     String ClassCode;
     String ClassName;
 
