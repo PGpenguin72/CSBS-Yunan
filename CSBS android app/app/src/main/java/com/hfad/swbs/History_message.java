@@ -25,6 +25,7 @@ import android.preference.EditTextPreference;
 import android.text.Html;
 import android.text.SpannableString;
 import android.text.TextPaint;
+import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
 import android.text.util.Linkify;
 import android.util.Log;
@@ -36,11 +37,13 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import org.w3c.dom.Text;
@@ -50,8 +53,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -64,6 +65,7 @@ public class History_message extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
+    private static final String PHOTO_PREFIX = "[Photo]";
 
     // TODO: Rename and change types of parameters
     private String mParam1;
@@ -80,6 +82,7 @@ public class History_message extends Fragment {
     private TextView fromWhoLar;
     private TextView sendtimeLar;
     private TextView contentLar;
+    private ImageView contentLarImage;
     private TextView readTextLar;
     private TextView classNum;
     private TextView message_len;
@@ -214,6 +217,7 @@ public class History_message extends Fragment {
         fromWhoLar = view.findViewById(R.id.fromWhoLar);
         sendtimeLar = view.findViewById(R.id.sendtimeLar);
         contentLar = view.findViewById(R.id.contentLar);
+        contentLarImage = view.findViewById(R.id.contentLarImage);
         readTextLar = view.findViewById(R.id.readTextLar);
         readbuttonLar = view.findViewById(R.id.readbutton);
         classNum = view.findViewById(R.id.class_num);
@@ -350,26 +354,29 @@ public class History_message extends Fragment {
 //            message[i][2] = "測試測試\n測試測試測試測試測試設次社測測試餓餓次社測試測試餓餓次社測試測試餓餓次社測試測試";
             Log.d("message", message[i][2]);
             Log.d("countLines", String.valueOf(countLines(message[i][2])));
-            String newString = truncateStringToLines(message[i][2], 2);
-            if (newString.length() > 29) {
-                newString = newString.substring(0, Math.min(newString.length(), 23));
-                newString += "......";
-
-
-                content.setText(Html.fromHtml(newString));
-
-            } else {
-                content.setText(newString);
-            }
             content.setTextSize(TypedValue.COMPLEX_UNIT_SP,30);
             content.setPadding(120,2,100,80);
-            content.setLayoutParams(new ConstraintLayout.LayoutParams(
-                    ConstraintLayout.LayoutParams.WRAP_CONTENT,
+            ConstraintLayout.LayoutParams contentParams = new ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_CONSTRAINT,
                     ConstraintLayout.LayoutParams.WRAP_CONTENT
-
-            ));
-
+            );
+            content.setLayoutParams(contentParams);
             innerLayout.addView(content);
+
+            ImageView contentImage = new ImageView(getContext());
+            contentImage.setId(View.generateViewId());
+            contentImage.setAdjustViewBounds(true);
+            contentImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            contentImage.setVisibility(View.GONE);
+            contentImage.setContentDescription(getString(R.string.photo_message_description));
+            ConstraintLayout.LayoutParams imageParams = new ConstraintLayout.LayoutParams(
+                    ConstraintLayout.LayoutParams.MATCH_CONSTRAINT,
+                    ConstraintLayout.LayoutParams.WRAP_CONTENT
+            );
+            contentImage.setLayoutParams(imageParams);
+            innerLayout.addView(contentImage);
+
+            displayCardMessageContent(message[i][2], content, contentImage);
 
             TextView sendtime = new TextView(getContext());
             sendtime.setId(View.generateViewId()); // Set an ID for constraints
@@ -396,6 +403,13 @@ public class History_message extends Fragment {
 
             constraintSet.connect(content.getId(), ConstraintSet.TOP, teacher.getId(), ConstraintSet.BOTTOM, 20);
             constraintSet.connect(content.getId(), ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT, 60);
+            constraintSet.connect(content.getId(), ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT, 60);
+            constraintSet.connect(content.getId(), ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, 80);
+
+            constraintSet.connect(contentImage.getId(), ConstraintSet.TOP, teacher.getId(), ConstraintSet.BOTTOM, 20);
+            constraintSet.connect(contentImage.getId(), ConstraintSet.LEFT, ConstraintSet.PARENT_ID, ConstraintSet.LEFT, 60);
+            constraintSet.connect(contentImage.getId(), ConstraintSet.RIGHT, ConstraintSet.PARENT_ID, ConstraintSet.RIGHT, 60);
+            constraintSet.connect(contentImage.getId(), ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, 80);
 
             constraintSet.connect(readText.getId(), ConstraintSet.LEFT, teacher.getId(), ConstraintSet.RIGHT, 60);
             constraintSet.connect(readText.getId(), ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP, 50);
@@ -428,6 +442,121 @@ public class History_message extends Fragment {
             containerLayout.addView(cardView);
         }
 
+    }
+
+
+    private void displayCardMessageContent(String messageText, TextView contentView, ImageView contentImageView) {
+        if (messageText == null) {
+            messageText = "";
+        }
+
+        if (isPhotoMessage(messageText)) {
+            String url = extractPhotoUrl(messageText);
+            if (!TextUtils.isEmpty(url)) {
+                contentView.setVisibility(View.GONE);
+                contentView.setText("");
+                contentImageView.setVisibility(View.VISIBLE);
+                Glide.with(this)
+                        .load(url)
+                        .into(contentImageView);
+                return;
+            }
+            String fallbackText = messageText.substring(PHOTO_PREFIX.length()).trim();
+            if (!TextUtils.isEmpty(fallbackText)) {
+                messageText = fallbackText;
+            }
+        }
+
+        Glide.with(this).clear(contentImageView);
+        contentImageView.setImageDrawable(null);
+        contentImageView.setVisibility(View.GONE);
+        contentView.setVisibility(View.VISIBLE);
+
+        String preview = truncateStringToLines(messageText, 2);
+        if (preview.length() > 29) {
+            preview = preview.substring(0, Math.min(preview.length(), 23));
+            preview += "......";
+            contentView.setText(Html.fromHtml(preview));
+        } else {
+            contentView.setText(preview);
+        }
+    }
+
+
+    private void displayLargeMessageContent(String messageText) {
+        if (messageText == null) {
+            messageText = "";
+        }
+
+        if (isPhotoMessage(messageText)) {
+            String url = extractPhotoUrl(messageText);
+            if (!TextUtils.isEmpty(url)) {
+                contentLar.setVisibility(View.GONE);
+                contentLar.setText("");
+                contentLarImage.setVisibility(View.VISIBLE);
+                Glide.with(this)
+                        .load(url)
+                        .into(contentLarImage);
+                return;
+            }
+            String fallbackText = messageText.substring(PHOTO_PREFIX.length()).trim();
+            if (!TextUtils.isEmpty(fallbackText)) {
+                messageText = fallbackText;
+            }
+        }
+
+        Glide.with(this).clear(contentLarImage);
+        contentLarImage.setImageDrawable(null);
+        contentLarImage.setVisibility(View.GONE);
+        contentLar.setVisibility(View.VISIBLE);
+        contentLar.setText(messageText);
+        contentLar.setLinkTextColor(ContextCompat.getColor(requireContext(), R.color.url));
+    }
+
+    private boolean isPhotoMessage(String messageText) {
+        return !TextUtils.isEmpty(messageText) && messageText.startsWith(PHOTO_PREFIX);
+    }
+
+    private String extractPhotoUrl(String messageText) {
+        if (TextUtils.isEmpty(messageText) || !messageText.startsWith(PHOTO_PREFIX)) {
+            return "";
+        }
+        String urlPart = messageText.substring(PHOTO_PREFIX.length()).trim();
+        int endIndex = urlPart.length();
+        int spaceIndex = urlPart.indexOf(' ');
+        if (spaceIndex >= 0) {
+            endIndex = Math.min(endIndex, spaceIndex);
+        }
+        int newlineIndex = urlPart.indexOf('\n');
+        if (newlineIndex >= 0) {
+            endIndex = Math.min(endIndex, newlineIndex);
+        }
+        int bracketIndex = urlPart.indexOf('(');
+        if (bracketIndex >= 0) {
+            endIndex = Math.min(endIndex, bracketIndex);
+        }
+        int fullWidthBracketIndex = urlPart.indexOf('（');
+        if (fullWidthBracketIndex >= 0) {
+            endIndex = Math.min(endIndex, fullWidthBracketIndex);
+        }
+        String url = urlPart.substring(0, Math.max(0, endIndex)).trim();
+        return trimTrailingPunctuation(url);
+    }
+
+    private String trimTrailingPunctuation(String input) {
+        if (TextUtils.isEmpty(input)) {
+            return "";
+        }
+        int end = input.length();
+        while (end > 0) {
+            char c = input.charAt(end - 1);
+            if (c == ')' || c == ']' || c == '>' || c == '}' || c == '，' || c == ',' || c == '。' || c == '.' || c == '）' || c == '】' || c == '》') {
+                end--;
+            } else {
+                break;
+            }
+        }
+        return input.substring(0, end);
     }
 
 
@@ -469,8 +598,7 @@ public class History_message extends Fragment {
         teacherLar.setText(message[id][0]);
         fromWhoLar.setText(message[id][1]);
         sendtimeLar.setText(message[id][3]);
-        contentLar.setText(message[id][2]);
-        contentLar.setLinkTextColor(getResources().getColor(R.color.url));
+        displayLargeMessageContent(message[id][2]);
 
         if (database.checkIsNew(message[id][4]) == 3) {
             readTextLar.setText("未讀");
